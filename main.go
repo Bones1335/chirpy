@@ -27,7 +27,7 @@ func main() {
 
 	mx.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
 
-	mx.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	mx.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
 		body := "OK"
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -35,8 +35,8 @@ func main() {
 		w.Write([]byte(body))
 	})
 
-	mx.HandleFunc("GET /metrics", apiCfg.handlerMetrics)
-	mx.HandleFunc("POST /reset", apiCfg.handlerReset)
+	mx.HandleFunc("GET /api/metrics", apiCfg.handlerMetrics)
+	mx.HandleFunc("POST /api/reset", apiCfg.handlerReset)
 
 	log.Fatal(server.ListenAndServe())
 }
