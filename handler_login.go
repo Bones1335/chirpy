@@ -6,17 +6,19 @@ import (
 	"time"
 
 	"github.com/Bones1335/chirpy/internal/auth"
+	"github.com/Bones1335/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email            string         `json:"email"`
-		Password         string         `json:"password"`
-		ExpiresInSeconds *time.Duration `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	type response struct {
 		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -39,28 +41,40 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const DefaultExpiry = 1 * time.Hour
-	var expiry time.Duration
-
-	if params.ExpiresInSeconds == nil {
-		expiry = DefaultExpiry
-	} else if *params.ExpiresInSeconds > DefaultExpiry {
-		expiry = DefaultExpiry
-	} else {
-		expiry = *params.ExpiresInSeconds
-	}
-
-	token, err := auth.MakeJWT(login.ID, cfg.jwtSecret, expiry)
+	accessToken, err := auth.MakeJWT(
+		login.ID,
+		cfg.jwtSecret,
+		time.Hour,
+	)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Couldn't get token", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create access JWT", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, User{
-		ID:        login.ID,
-		CreatedAt: login.CreatedAt,
-		UpdatedAt: login.UpdatedAt,
-		Email:     login.Email,
-		Token:     token,
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create refresh token", err)
+		return
+	}
+
+	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		UserID:    login.ID,
+		Token:     refreshToken,
+		ExpiresAt: time.Now().UTC().Add(time.Hour * 24 * 60),
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't save refresh token", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:        login.ID,
+			CreatedAt: login.CreatedAt,
+			UpdatedAt: login.UpdatedAt,
+			Email:     login.Email,
+		},
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }
