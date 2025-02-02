@@ -15,4 +15,3 @@ func TestHashPassword(t *testing.T) {
 		t.Fatalf("HashPassword('password') = %q, %v, want match for %#q, error", hashedPass, err, asString)
 	}
 }
-

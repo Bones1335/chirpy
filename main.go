@@ -17,11 +17,13 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	jwtSecret      string
 }
 
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	JWTSecret := os.Getenv("JWT_SECRET")
 
 	const filepathRoot = "."
 	const port = "8080"
@@ -37,6 +39,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 		platform:       os.Getenv("PLATFORM"),
+		jwtSecret:      JWTSecret,
 	}
 
 	mux := http.NewServeMux()
@@ -45,12 +48,12 @@ func main() {
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
-	
+
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirps)
 
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirpID)
-	
+
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
 	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
 

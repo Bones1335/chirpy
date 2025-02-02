@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -72,4 +74,19 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	val := headers.Get("Authorization")
+	if val == "" {
+		return "", fmt.Errorf("No authorization token found\n")
+	}
+
+	authStringSplit := strings.Split(val, " ")
+	if len(authStringSplit) != 2 {
+		return "", fmt.Errorf("Authorization string not in proper format: %v", authStringSplit)
+	}
+
+	tokenString := authStringSplit[1]
+	return tokenString, nil
 }
