@@ -49,7 +49,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const login = `-- name: Login :one
-SELECT id, created_at, updated_at, email, password FROM users
+SELECT id, created_at, updated_at, email, password, is_chirpy_red FROM users
 WHERE email = $1
 `
 
@@ -62,6 +62,7 @@ func (q *Queries) Login(ctx context.Context, email string) (User, error) {
 		&i.UpdatedAt,
 		&i.Email,
 		&i.Password,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -69,7 +70,7 @@ func (q *Queries) Login(ctx context.Context, email string) (User, error) {
 const updateUser = `-- name: UpdateUser :one
 UPDATE users SET email = $2, password = $3, updated_at = NOW()
 WHERE id = $1
-RETURNING id, created_at, updated_at, email, password
+RETURNING id, created_at, updated_at, email, password, is_chirpy_red
 `
 
 type UpdateUserParams struct {
@@ -87,6 +88,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.Password,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
