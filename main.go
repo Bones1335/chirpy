@@ -18,12 +18,14 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	jwtSecret      string
+	apiKey         string
 }
 
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	JWTSecret := os.Getenv("JWT_SECRET")
+	apiKey := os.Getenv("POLKA_KEY")
 
 	const filepathRoot = "."
 	const port = "8080"
@@ -40,6 +42,7 @@ func main() {
 		db:             dbQueries,
 		platform:       os.Getenv("PLATFORM"),
 		jwtSecret:      JWTSecret,
+		apiKey:         apiKey,
 	}
 
 	mux := http.NewServeMux()

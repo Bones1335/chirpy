@@ -4,10 +4,20 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Bones1335/chirpy/internal/auth"
 	"github.com/google/uuid"
 )
 
 func (cfg *apiConfig) handlerPolka(w http.ResponseWriter, r *http.Request) {
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "No API key", err)
+		return
+	}
+	if apiKey != cfg.apiKey {
+		respondWithError(w, http.StatusUnauthorized, "Invalid API key", err)
+	}
+
 	type parameters struct {
 		Event string `json:"event"`
 		Data  struct {
@@ -17,7 +27,7 @@ func (cfg *apiConfig) handlerPolka(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return

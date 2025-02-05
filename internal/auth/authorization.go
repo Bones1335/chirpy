@@ -102,3 +102,19 @@ func MakeRefreshToken() (string, error) {
 
 	return hex.EncodeToString(token), nil
 }
+
+func GetAPIKey(headers http.Header) (string, error) {
+	val := headers.Get("Authorization")
+	fmt.Printf("%v\n", val)
+	if val == "" {
+		return "", fmt.Errorf("No authorization header found\n")
+	}
+
+	authStringSplit := strings.Split(val, " ")
+	if len(authStringSplit) != 2 {
+		return "", fmt.Errorf("Authorization string not in proper format: %v", authStringSplit)
+	}
+
+	apiKey := authStringSplit[1]
+	return apiKey, nil
+}
