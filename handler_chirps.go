@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/Bones1335/chirpy/internal/auth"
@@ -74,25 +75,34 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	authorID := r.URL.Query().Get("author_id")
-	var dbAuthorID uuid.UUID
-	if authorID != "" {
-		parsedID, err := uuid.Parse(authorID)
-		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "incorrect uuid format", err)
-			return
-		}
-		dbAuthorID = parsedID
-	}
-
-	dbChirps, err := cfg.db.GetChirps(r.Context(), dbAuthorID)
+	dbChirps, err := cfg.db.GetChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't GET chirps", err)
 		return
 	}
 
+	authorID := uuid.Nil
+	authorIDString := r.URL.Query().Get("author_id")
+	if authorIDString != "" {
+		authorID, err = uuid.Parse(authorIDString)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "incorrect uuid format", err)
+			return
+		}
+	}
+
+	sortDirection := "asc"
+	sortDirectionParam := r.URL.Query().Get("sort")
+	if sortDirectionParam == "desc" {
+		sortDirection = "desc"
+	}
+
 	chirps := []Chirp{}
 	for _, dbChirp := range dbChirps {
+		if authorID != uuid.Nil && dbChirp.UserID != authorID {
+			continue
+		}
+
 		chirps = append(chirps, Chirp{
 			ID:        dbChirp.ID,
 			CreatedAt: dbChirp.CreatedAt,
@@ -101,6 +111,13 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			UserID:    dbChirp.UserID,
 		})
 	}
+
+	sort.Slice(chirps, func(i, j int) bool {
+		if sortDirection == "desc" {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		}
+		return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+	})
 
 	respondWithJSON(w, http.StatusOK, chirps)
 }
@@ -129,7 +146,7 @@ func (cfg *apiConfig) handlerGetChirpID(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, chirp)
 }
 
-func(cfg *apiConfig) handlerDeleteChirpID(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerDeleteChirpID(w http.ResponseWriter, r *http.Request) {
 	chirpIDString := r.PathValue("chirpID")
 	chirpID, err := uuid.Parse(chirpIDString)
 	if err != nil {
