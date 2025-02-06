@@ -74,7 +74,18 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	dbChirps, err := cfg.db.GetChirps(r.Context())
+	authorID := r.URL.Query().Get("author_id")
+	var dbAuthorID uuid.UUID
+	if authorID != "" {
+		parsedID, err := uuid.Parse(authorID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "incorrect uuid format", err)
+			return
+		}
+		dbAuthorID = parsedID
+	}
+
+	dbChirps, err := cfg.db.GetChirps(r.Context(), dbAuthorID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't GET chirps", err)
 		return
